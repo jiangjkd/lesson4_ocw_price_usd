@@ -117,6 +117,7 @@ where
 
 pub type System = system::Module<TestRuntime>;
 pub type OcwDemo = Module<TestRuntime>;
+pub type PriceUsd = Module<Test>;
 
 struct ExternalityBuilder;
 
@@ -151,65 +152,12 @@ impl ExternalityBuilder {
 }
 
 #[test]
-fn submit_number_signed_works() {
-	let (mut t, _, _) = ExternalityBuilder::build();
-	t.execute_with(|| {
-		// call submit_number_signed
-		let num = 32;
-		let acct: <TestRuntime as system::Trait>::AccountId = Default::default();
-		assert_ok!(OcwDemo::submit_number_signed(
-			Origin::signed(acct),
-			num
-		));
-		// A number is inserted to <Numbers> vec
-		assert_eq!(<Numbers>::get(), vec![num]);
-		// An event is emitted
-		assert!(System::events()
-			.iter()
-			.any(|er| er.event == TestEvent::ocw_demo(RawEvent::NewNumber(Some(acct), num))));
-
-		// Insert another number
-		let num2 = num * 2;
-		assert_ok!(OcwDemo::submit_number_signed(
-			Origin::signed(acct),
-			num2
-		));
-		// A number is inserted to <Numbers> vec
-		assert_eq!(<Numbers>::get(), vec![num, num2]);
-	});
-}
-
-#[test]
-fn test_offchain_signed_tx() {
-	let (mut t, pool_state, _offchain_state) = ExternalityBuilder::build();
-
-	t.execute_with(|| {
-		// Setup
-		let num = 32;
-		OcwDemo::offchain_signed_tx(num).unwrap();
-
-		// Verify
-		let tx = pool_state.write().transactions.pop().unwrap();
-		assert!(pool_state.read().transactions.is_empty());
-		let tx = TestExtrinsic::decode(&mut &*tx).unwrap();
-		assert_eq!(tx.signature.unwrap().0, 0);
-		assert_eq!(tx.call, Call::submit_number_signed(num));
-	});
-}
-
-#[test]
-fn test_offchain_unsigned_tx() {
+fn update_price_usd_works() {
 	let (mut t, pool_state, _offchain_state) = ExternalityBuilder::build();
 
 	t.execute_with(|| {
 		// when
-		let num = 32;
-		OcwDemo::offchain_unsigned_tx(num).unwrap();
-		// then
-		let tx = pool_state.write().transactions.pop().unwrap();
-		assert!(pool_state.read().transactions.is_empty());
-		let tx = TestExtrinsic::decode(&mut &*tx).unwrap();
-		assert_eq!(tx.signature, None);
-		assert_eq!(tx.call, Call::submit_number_unsigned(num));
+		let price:u64 = (18.21 * 10000f64) as u64;
+	    assert_ok!(PriceUsd::update_price_usd(Origin::signed(1), price ) );
 	});
 }
